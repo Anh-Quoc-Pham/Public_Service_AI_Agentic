@@ -82,7 +82,9 @@ def test_chat_functionality():
             headers={"Content-Type": "application/json"},
             json={
                 "query": "What documents do I need?",
-                "user_context": conversation
+                "user_context": conversation,
+                "mode": "agentic",
+                "session_id": "chat-test-session"
             }
         )
         
@@ -90,6 +92,7 @@ def test_chat_functionality():
             data = response.json()
             print("✅ Conversation context test passed")
             print(f"   📝 Response: {data.get('response', '')[:100]}...")
+            print(f"   🤖 Mode: {data.get('execution_mode', 'unknown')}")
         else:
             print(f"❌ Conversation context test failed: {response.status_code}")
             

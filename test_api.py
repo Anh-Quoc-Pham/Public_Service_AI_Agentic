@@ -15,6 +15,7 @@ class APITester:
         self.base_url = base_url
         self.session = requests.Session()
         self.test_results = []
+        self.agent_session_id = f"api-test-{int(time.time())}"
         
     def log_test(self, test_name: str, success: bool, message: str = "", response: Dict = None):
         """Log test results"""
@@ -279,6 +280,115 @@ class APITester:
                 False,
                 f"Exception: {str(e)}"
             )
+
+    def test_agentic_query_endpoint(self) -> bool:
+        """Test agentic query execution via /query."""
+        try:
+            payload = {
+                "query": "I need help with SNAP and housing. Which one should I apply for first?",
+                "mode": "agentic",
+                "session_id": self.agent_session_id,
+                "max_steps": 4,
+            }
+
+            response = self.session.post(
+                f"{self.base_url}/query",
+                json=payload,
+                timeout=45,
+            )
+
+            if response.status_code != 200:
+                return self.log_test(
+                    "Agentic Query",
+                    False,
+                    f"Status code: {response.status_code}",
+                )
+
+            data = response.json()
+            response_text = data.get("response", "")
+            execution_mode = data.get("execution_mode")
+
+            if not response_text:
+                return self.log_test(
+                    "Agentic Query",
+                    False,
+                    "Response text is empty",
+                    data,
+                )
+
+            if execution_mode != "agentic":
+                return self.log_test(
+                    "Agentic Query",
+                    False,
+                    f"Expected execution_mode=agentic, got {execution_mode}",
+                    data,
+                )
+
+            return self.log_test(
+                "Agentic Query",
+                True,
+                (
+                    f"Session: {data.get('session_id')} | "
+                    f"Trace steps: {len(data.get('agent_trace') or [])}"
+                ),
+                {
+                    "session_id": data.get("session_id"),
+                    "execution_mode": execution_mode,
+                    "response_length": len(response_text),
+                },
+            )
+
+        except Exception as e:
+            return self.log_test(
+                "Agentic Query",
+                False,
+                f"Exception: {str(e)}",
+            )
+
+    def test_agentic_session_lifecycle(self) -> bool:
+        """Test agentic session inspect and delete endpoints."""
+        try:
+            get_response = self.session.get(
+                f"{self.base_url}/agent/sessions/{self.agent_session_id}",
+                timeout=20,
+            )
+
+            if get_response.status_code != 200:
+                return self.log_test(
+                    "Agentic Session Lifecycle",
+                    False,
+                    f"Session fetch failed with status: {get_response.status_code}",
+                )
+
+            session_data = get_response.json()
+            delete_response = self.session.delete(
+                f"{self.base_url}/agent/sessions/{self.agent_session_id}",
+                timeout=20,
+            )
+
+            if delete_response.status_code != 200:
+                return self.log_test(
+                    "Agentic Session Lifecycle",
+                    False,
+                    f"Session delete failed with status: {delete_response.status_code}",
+                )
+
+            return self.log_test(
+                "Agentic Session Lifecycle",
+                True,
+                f"Turn count before delete: {session_data.get('turn_count', 0)}",
+                {
+                    "session_id": session_data.get("session_id"),
+                    "turn_count": session_data.get("turn_count", 0),
+                },
+            )
+
+        except Exception as e:
+            return self.log_test(
+                "Agentic Session Lifecycle",
+                False,
+                f"Exception: {str(e)}",
+            )
     
     def run_all_tests(self) -> Dict[str, Any]:
         """Run all tests and return results"""
@@ -289,6 +399,8 @@ class APITester:
             ("Health Check", self.test_health_check),
             ("Root Endpoint", self.test_root_endpoint),
             ("Query Endpoint", self.test_query_endpoint),
+            ("Agentic Query", self.test_agentic_query_endpoint),
+            ("Agentic Session Lifecycle", self.test_agentic_session_lifecycle),
             ("Voice Synthesis", self.test_voice_synthesis),
             ("Voice Processing Pipeline", self.test_voice_processing_pipeline),
             ("Rasa Integration", self.test_rasa_integration)

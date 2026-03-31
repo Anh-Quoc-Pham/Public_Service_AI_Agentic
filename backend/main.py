@@ -8,8 +8,9 @@ import logging
 
 from app.services.rag_service import RAGService
 from app.services.llm_service import LLMService
+from app.services.agentic_service import AgenticService
 from app.services.speech_service import SpeechService
-from app.models.query_models import QueryRequest, QueryResponse, VoiceQueryRequest
+from app.models.query_models import QueryRequest, QueryResponse, VoiceQueryRequest, ExecutionMode
 
 # Load environment variables
 load_dotenv()
@@ -37,7 +38,22 @@ app.add_middleware(
 # Initialize services
 rag_service = RAGService()
 llm_service = LLMService()
+agentic_service = AgenticService(rag_service=rag_service, llm_service=llm_service)
 speech_service = SpeechService()
+
+
+def _normalize_user_context(user_context):
+    """Normalize inbound user context for classic and agentic execution paths."""
+    if user_context is None:
+        return None
+
+    if isinstance(user_context, dict):
+        return user_context
+
+    if isinstance(user_context, list):
+        return {"conversation_history": user_context}
+
+    return {"raw_context": str(user_context)}
 
 @app.on_event("startup")
 async def startup_event():
@@ -45,6 +61,7 @@ async def startup_event():
     logger.info("Initializing Public Service Navigation Assistant...")
     await rag_service.initialize()
     await llm_service.initialize()
+    await agentic_service.initialize()
     await speech_service.initialize()
     logger.info("All services initialized successfully!")
 
@@ -60,30 +77,82 @@ async def root():
 @app.post("/query", response_model=QueryResponse)
 async def process_query(request: QueryRequest):
     """
-    Process a text query using RAG and LLM
+    Process a text query using either classic RAG+LLM or agentic orchestration
     """
     try:
         logger.info(f"Processing query: {request.query}")
+
+        if request.mode == ExecutionMode.AGENTIC:
+            agent_result = await agentic_service.process_query(
+                query=request.query,
+                user_context=request.user_context,
+                session_id=request.session_id,
+                max_steps=request.max_steps,
+            )
+
+            return QueryResponse(
+                response=agent_result["response"],
+                sources=agent_result["sources"],
+                confidence=agent_result["confidence"],
+                session_id=agent_result.get("session_id"),
+                execution_mode=ExecutionMode.AGENTIC,
+                agent_trace=agent_result.get("trace"),
+            )
         
         # Retrieve relevant documents
         relevant_docs = await rag_service.retrieve_documents(request.query)
+
+        normalized_context = _normalize_user_context(request.user_context)
         
         # Generate response using LLM
         response = await llm_service.generate_response(
             query=request.query,
             context_docs=relevant_docs,
-            user_context=request.user_context
+            user_context=normalized_context
         )
         
         return QueryResponse(
             response=response,
             sources=relevant_docs,
-            confidence=0.95  # Placeholder confidence score
+            confidence=0.95,  # Placeholder confidence score
+            session_id=request.session_id,
+            execution_mode=ExecutionMode.CLASSIC
         )
     
     except Exception as e:
         logger.error(f"Error processing query: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/agent/query", response_model=QueryResponse)
+async def process_agent_query(request: QueryRequest):
+    """Convenience endpoint that always runs in agentic mode."""
+    agent_request = QueryRequest(
+        query=request.query,
+        user_context=request.user_context,
+        session_id=request.session_id,
+        mode=ExecutionMode.AGENTIC,
+        max_steps=request.max_steps,
+    )
+    return await process_query(agent_request)
+
+
+@app.get("/agent/sessions/{session_id}")
+async def get_agent_session(session_id: str):
+    """Get agentic session snapshot for debugging and observability."""
+    session = agentic_service.get_session_snapshot(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+
+@app.delete("/agent/sessions/{session_id}")
+async def delete_agent_session(session_id: str):
+    """Delete an agentic session from in-memory store."""
+    deleted = agentic_service.clear_session(session_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"status": "deleted", "session_id": session_id}
 
 @app.post("/voice/transcribe")
 async def transcribe_audio(audio_file: UploadFile = File(...)):
@@ -175,13 +244,19 @@ async def health_check():
         rag_status = await rag_service.health_check()
         llm_status = await llm_service.health_check()
         speech_status = await speech_service.health_check()
+        agentic_status = {
+            "initialized": agentic_service.is_initialized,
+            "active_sessions": len(agentic_service.sessions),
+            "default_max_steps": agentic_service.default_max_steps,
+        }
         
         return {
             "status": "healthy",
             "services": {
                 "rag_service": rag_status,
                 "llm_service": llm_status,
-                "speech_service": speech_status
+                "speech_service": speech_status,
+                "agentic_service": agentic_status,
             }
         }
     except Exception as e:

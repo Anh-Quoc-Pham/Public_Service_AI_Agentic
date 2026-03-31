@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from enum import Enum
 
 class VoiceType(str, Enum):
@@ -8,12 +8,32 @@ class VoiceType(str, Enum):
     FEMALE = "female"
     NEUTRAL = "neutral"
 
+
+class ExecutionMode(str, Enum):
+    """Execution mode for query processing"""
+    CLASSIC = "classic"
+    AGENTIC = "agentic"
+
 class QueryRequest(BaseModel):
     """Request model for text queries"""
-    query: str = Field(..., description="The user's query text")
-    user_context: Optional[List[Dict[str, Any]]] = Field(
+    query: str = Field(..., min_length=1, description="The user's query text")
+    user_context: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = Field(
         default=None, 
         description="Conversation history or additional user context"
+    )
+    session_id: Optional[str] = Field(
+        default=None,
+        description="Session identifier for multi-turn context in agentic mode"
+    )
+    mode: ExecutionMode = Field(
+        default=ExecutionMode.CLASSIC,
+        description="Execution mode: classic pipeline or agentic orchestration"
+    )
+    max_steps: int = Field(
+        default=4,
+        ge=1,
+        le=8,
+        description="Maximum number of tool/planning steps in agentic mode"
     )
 
 class QueryResponse(BaseModel):
@@ -28,6 +48,18 @@ class QueryResponse(BaseModel):
         ge=0.0, 
         le=1.0,
         description="Confidence score of the response"
+    )
+    session_id: Optional[str] = Field(
+        default=None,
+        description="Session identifier used by the backend"
+    )
+    execution_mode: ExecutionMode = Field(
+        default=ExecutionMode.CLASSIC,
+        description="Execution mode used to generate this response"
+    )
+    agent_trace: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Optional execution trace for agentic decisions and tool usage"
     )
 
 class VoiceQueryRequest(BaseModel):

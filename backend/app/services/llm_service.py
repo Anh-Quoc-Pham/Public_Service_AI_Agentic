@@ -5,7 +5,7 @@ import asyncio
 import json
 from langchain.llms import Ollama
 from langchain.chat_models import ChatOllama
-from langchain.schema import HumanMessage, SystemMessage
+from langchain.schema import HumanMessage, SystemMessage, AIMessage
 from langchain.prompts import PromptTemplate
 import openai
 
@@ -21,6 +21,7 @@ class LLMService:
         self.model_name = os.getenv("LLM_MODEL", "mixtral-8x7b")
         self.api_base = os.getenv("LLM_API_BASE", "http://localhost:11434")
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        self.openai_client = None
         
     async def initialize(self):
         """Initialize the LLM service"""
@@ -59,6 +60,7 @@ class LLMService:
                         messages=[{"role": "user", "content": "Hello"}],
                         max_tokens=10
                     )
+                    self.openai_client = client
                     self.chat_model = "openai"  # Use OpenAI API directly
                     logger.info("Using OpenAI as fallback LLM")
                     self.is_initialized = True
@@ -109,6 +111,67 @@ class LLMService:
         except Exception as e:
             logger.error(f"Error generating response: {str(e)}")
             return self._generate_fallback_response(query)
+
+    async def chat_completion(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.3,
+        max_tokens: int = 600,
+    ) -> str:
+        """Run a role-based chat completion for planner/executor style tasks."""
+        try:
+            if not self.is_initialized:
+                raise RuntimeError("LLM service not initialized")
+
+            sanitized_messages = []
+            for message in messages:
+                if not isinstance(message, dict):
+                    continue
+                role = str(message.get("role", "user")).strip().lower()
+                content = str(message.get("content", "")).strip()
+                if not content or role not in {"system", "assistant", "user"}:
+                    continue
+                sanitized_messages.append({"role": role, "content": content})
+
+            if not sanitized_messages:
+                return ""
+
+            if self.chat_model == "mock":
+                return self._mock_chat_completion(sanitized_messages)
+
+            if self.chat_model == "openai":
+                from openai import OpenAI
+
+                if not self.openai_client:
+                    self.openai_client = OpenAI(api_key=self.openai_api_key)
+
+                response = await asyncio.to_thread(
+                    self.openai_client.chat.completions.create,
+                    model="gpt-3.5-turbo",
+                    messages=sanitized_messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+                return (response.choices[0].message.content or "").strip()
+
+            langchain_messages = []
+            for message in sanitized_messages:
+                if message["role"] == "system":
+                    langchain_messages.append(SystemMessage(content=message["content"]))
+                elif message["role"] == "assistant":
+                    langchain_messages.append(AIMessage(content=message["content"]))
+                else:
+                    langchain_messages.append(HumanMessage(content=message["content"]))
+
+            response = await asyncio.to_thread(self.chat_model.invoke, langchain_messages)
+            if response and getattr(response, "content", None):
+                return response.content.strip()
+
+            return ""
+
+        except Exception as e:
+            logger.error(f"Error in chat completion: {str(e)}")
+            raise
     
     def _create_prompt(
         self, 
@@ -163,9 +226,11 @@ Response:"""
         try:
             from openai import OpenAI
             
-            client = OpenAI(api_key=self.openai_api_key)
+            if not self.openai_client:
+                self.openai_client = OpenAI(api_key=self.openai_api_key)
+
             response = await asyncio.to_thread(
-                client.chat.completions.create,
+                self.openai_client.chat.completions.create,
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a helpful public service navigation assistant."},
@@ -180,6 +245,41 @@ Response:"""
         except Exception as e:
             logger.error(f"Error generating OpenAI response: {str(e)}")
             raise
+
+    def _mock_chat_completion(self, messages: List[Dict[str, str]]) -> str:
+        """Provide deterministic mock chat output for development mode."""
+        last_user_message = ""
+        for message in reversed(messages):
+            if message.get("role") == "user":
+                last_user_message = message.get("content", "")
+                break
+
+        prompt_lower = last_user_message.lower()
+        if "json" in prompt_lower and "steps" in prompt_lower:
+            return json.dumps(
+                {
+                    "goal": "Provide grounded support for the user question.",
+                    "needs_clarification": False,
+                    "clarification_question": "",
+                    "steps": [
+                        {
+                            "tool": "retrieve_documents",
+                            "input": "public service eligibility and application guidance",
+                            "reason": "Collect context before answering.",
+                        },
+                        {
+                            "tool": "final_answer",
+                            "input": "",
+                            "reason": "Respond with practical next steps.",
+                        },
+                    ],
+                }
+            )
+
+        return (
+            "I can help with SNAP, housing, and healthcare navigation. "
+            "Please share your location and household details for a more precise answer."
+        )
     
     async def _generate_mock_response(self, query: str, context_docs: List[Dict[str, Any]]) -> str:
         """Generate a mock response for development/testing"""

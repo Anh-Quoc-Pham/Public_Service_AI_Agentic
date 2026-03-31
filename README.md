@@ -24,8 +24,55 @@ A voice-enabled AI system designed to help citizens access and understand suppor
 - **Conversational AI**: Rasa-powered intent recognition and dialog management
 - **Knowledge Retrieval**: RAG pipeline with vector database for document search
 - **LLM Integration**: Local LLM (Ollama) for response generation
+- **Agentic AI Orchestration**: Planner + tool execution + session memory for multi-step reasoning
 - **Speech Synthesis**: Local TTS with SSML for natural speech
 - **Fully Open Source**: No proprietary dependencies (except optional Twilio trial credits)
+
+## Agentic AI Upgrade
+
+The backend now supports two execution modes:
+
+- **classic**: Existing RAG -> LLM pipeline (default, backward-compatible)
+- **agentic**: Multi-step planning loop with retrieval tool calls and session memory
+
+Agentic mode enables:
+
+- Session-based multi-turn context with `session_id`
+- Structured execution trace (`agent_trace`) for observability
+- Optional dedicated endpoint for agent-only workflows
+
+### Agentic API Examples
+
+Use the existing `/query` endpoint with `mode=agentic`:
+
+```bash
+curl -X POST http://localhost:8000/query \
+   -H "Content-Type: application/json" \
+   -d '{
+      "query": "I am a single parent. What benefits can I apply for first?",
+      "mode": "agentic",
+      "session_id": "citizen-001",
+      "max_steps": 4
+   }'
+```
+
+Or use the dedicated endpoint:
+
+```bash
+curl -X POST http://localhost:8000/agent/query \
+   -H "Content-Type: application/json" \
+   -d '{
+      "query": "What documents should I prepare for SNAP and housing assistance?",
+      "session_id": "citizen-001"
+   }'
+```
+
+Inspect and clear sessions:
+
+```bash
+curl http://localhost:8000/agent/sessions/citizen-001
+curl -X DELETE http://localhost:8000/agent/sessions/citizen-001
+```
 
 ## Quick Start
 
@@ -105,6 +152,10 @@ OPENAI_API_KEY=your_openai_key
 # LLM Configuration
 LLM_MODEL=llama2
 LLM_API_BASE=http://localhost:11434  # Ollama endpoint
+
+# Agentic Orchestration Configuration
+AGENT_MAX_STEPS=4
+AGENT_TRACE_ENABLED=true
 
 # Service URLs
 RASA_WEBHOOK_URL=http://localhost:5005/webhooks/rest/webhook
