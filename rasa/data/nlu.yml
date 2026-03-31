@@ -1,0 +1,230 @@
+version: "3.1"
+
+nlu:
+- intent: greet
+  examples: |
+    - hello
+    - hi
+    - hey
+    - good morning
+    - good afternoon
+    - good evening
+    - how are you
+    - what's up
+    - hello there
+    - hi there
+
+- intent: goodbye
+  examples: |
+    - bye
+    - goodbye
+    - see you
+    - see you later
+    - talk to you later
+    - have a good day
+    - take care
+    - thanks bye
+    - thank you bye
+    - that's all
+    - end call
+    - hang up
+
+- intent: affirm
+  examples: |
+    - yes
+    - y
+    - yeah
+    - yep
+    - sure
+    - absolutely
+    - correct
+    - right
+    - that's right
+    - ok
+    - okay
+    - of course
+
+- intent: deny
+  examples: |
+    - no
+    - n
+    - nope
+    - not really
+    - not at all
+    - that's not right
+    - incorrect
+    - wrong
+    - I don't think so
+
+- intent: out_of_scope
+  examples: |
+    - I want to order pizza
+    - what's the weather like
+    - tell me a joke
+    - play music
+    - book a flight
+    - order groceries
+    - schedule an appointment
+    - check my bank balance
+    - what time is it
+    - how old are you
+
+- intent: ask_snap_benefits
+  examples: |
+    - what is SNAP
+    - tell me about SNAP benefits
+    - food stamps
+    - nutrition assistance
+    - EBT benefits
+    - food assistance program
+    - how do I get food stamps
+    - SNAP eligibility
+    - food stamp application
+    - nutrition benefits
+    - food help
+    - government food assistance
+    - food voucher program
+    - SNAP program
+    - food stamp benefits
+    - how much can I get in food stamps
+    - food stamp requirements
+
+- intent: ask_housing_assistance
+  examples: |
+    - housing help
+    - section 8
+    - housing voucher
+    - public housing
+    - rent assistance
+    - housing assistance
+    - help with rent
+    - affordable housing
+    - housing program
+    - section 8 voucher
+    - housing choice voucher
+    - emergency shelter
+    - homeless shelter
+    - housing authority
+    - PHA
+    - rental assistance
+    - housing subsidy
+    - low income housing
+
+- intent: ask_healthcare_benefits
+  examples: |
+    - healthcare help
+    - health insurance
+    - Medicaid
+    - Medicare
+    - health coverage
+    - medical benefits
+    - health care assistance
+    - affordable care act
+    - ACA
+    - health marketplace
+    - healthcare.gov
+    - CHIP
+    - children's health insurance
+    - medical assistance
+    - health benefits
+    - insurance help
+    - medical coverage
+    - health plan
+
+- intent: ask_application_process
+  examples: |
+    - how do I apply
+    - application process
+    - how to apply
+    - apply for benefits
+    - application steps
+    - how to get benefits
+    - application procedure
+    - apply for assistance
+    - application requirements
+    - how to sign up
+    - enrollment process
+    - application form
+    - apply online
+    - application deadline
+    - how long does it take
+    - application timeline
+
+- intent: ask_eligibility
+  examples: |
+    - am I eligible
+    - eligibility requirements
+    - do I qualify
+    - qualification criteria
+    - income limits
+    - eligibility rules
+    - who qualifies
+    - eligibility check
+    - qualification requirements
+    - income requirements
+    - family size limits
+    - eligibility criteria
+    - do I meet the requirements
+    - qualification standards
+    - eligibility guidelines
+
+- intent: ask_documents_needed
+  examples: |
+    - what documents do I need
+    - required documents
+    - paperwork needed
+    - documents required
+    - what papers do I need
+    - application documents
+    - required paperwork
+    - proof of income
+    - ID requirements
+    - birth certificate
+    - social security card
+    - tax returns
+    - pay stubs
+    - utility bills
+    - rent receipts
+    - bank statements
+    - proof of residency
+
+- intent: ask_local_office
+  examples: |
+    - where is the office
+    - local office
+    - nearby office
+    - office location
+    - where to apply
+    - local agency
+    - office address
+    - office hours
+    - contact information
+    - phone number
+    - office near me
+    - closest office
+    - local department
+    - county office
+    - state office
+    - government office
+    - benefits office
+
+- intent: ask_general_help
+  examples: |
+    - help me
+    - I need help
+    - assistance
+    - support
+    - guidance
+    - what can you help me with
+    - what services do you provide
+    - what programs are available
+    - government help
+    - public assistance
+    - benefits help
+    - service navigation
+    - program information
+    - available services
+    - what's available
+    - help with benefits
+    - government services
+    - public services 

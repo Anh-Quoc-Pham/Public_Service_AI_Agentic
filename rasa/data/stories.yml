@@ -1,0 +1,104 @@
+version: "3.1"
+
+stories:
+- story: greet and ask for help
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_general_help
+  - action: utter_ask_general_help
+
+- story: ask about SNAP benefits
+  steps:
+  - intent: ask_snap_benefits
+  - action: utter_ask_snap_benefits
+  - intent: ask_eligibility
+  - action: action_fallback_to_rag
+
+- story: ask about housing assistance
+  steps:
+  - intent: ask_housing_assistance
+  - action: utter_ask_housing_assistance
+  - intent: ask_application_process
+  - action: action_fallback_to_rag
+
+- story: ask about healthcare benefits
+  steps:
+  - intent: ask_healthcare_benefits
+  - action: utter_ask_healthcare_benefits
+  - intent: ask_documents_needed
+  - action: action_fallback_to_rag
+
+- story: ask about application process
+  steps:
+  - intent: ask_application_process
+  - action: utter_ask_application_process
+  - intent: ask_local_office
+  - action: utter_ask_local_office
+
+- story: ask about eligibility
+  steps:
+  - intent: ask_eligibility
+  - action: utter_ask_eligibility
+  - intent: ask_documents_needed
+  - action: utter_ask_documents_needed
+
+- story: ask about documents needed
+  steps:
+  - intent: ask_documents_needed
+  - action: utter_ask_documents_needed
+
+- story: ask about local office
+  steps:
+  - intent: ask_local_office
+  - action: utter_ask_local_office
+
+- story: out of scope question
+  steps:
+  - intent: out_of_scope
+  - action: utter_out_of_scope
+
+- story: fallback to RAG
+  steps:
+  - intent: fallback
+  - action: action_fallback_to_rag
+
+- story: goodbye
+  steps:
+  - intent: goodbye
+  - action: utter_goodbye
+
+- story: complex SNAP inquiry
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_snap_benefits
+  - action: utter_ask_snap_benefits
+  - intent: ask_eligibility
+  - action: action_fallback_to_rag
+  - intent: ask_application_process
+  - action: action_fallback_to_rag
+  - intent: goodbye
+  - action: utter_goodbye
+
+- story: housing assistance inquiry
+  steps:
+  - intent: ask_housing_assistance
+  - action: utter_ask_housing_assistance
+  - intent: ask_eligibility
+  - action: action_fallback_to_rag
+  - intent: ask_local_office
+  - action: utter_ask_local_office
+  - intent: goodbye
+  - action: utter_goodbye
+
+- story: healthcare benefits inquiry
+  steps:
+  - intent: ask_healthcare_benefits
+  - action: utter_ask_healthcare_benefits
+  - intent: ask_eligibility
+  - action: action_fallback_to_rag
+  - intent: ask_documents_needed
+  - action: utter_ask_documents_needed
+  - intent: goodbye
+  - action: utter_goodbye 

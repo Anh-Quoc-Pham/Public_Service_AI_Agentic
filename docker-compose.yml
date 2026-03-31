@@ -1,0 +1,148 @@
+version: '3.8'
+
+services:
+  # FastAPI Backend (RAG + LLM + Speech)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_MODEL=${LLM_MODEL:-mixtral-8x7b}
+      - LLM_API_BASE=${LLM_API_BASE:-http://ollama:11434}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - RASA_WEBHOOK_URL=http://rasa:5005/webhooks/rest/webhook
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/vectorstore:/app/vectorstore
+    depends_on:
+      - ollama
+    networks:
+      - public-service-network
+    restart: unless-stopped
+
+  # Ollama LLM Service
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - public-service-network
+    restart: unless-stopped
+
+  # Rasa Conversational AI
+  rasa:
+    build:
+      context: ./rasa
+      dockerfile: Dockerfile
+    ports:
+      - "5005:5005"
+    environment:
+      - RAG_BACKEND_URL=http://backend:8000
+      - RASA_WEBHOOK_URL=http://rasa:5005/webhooks/rest/webhook
+    volumes:
+      - ./rasa/models:/app/models
+      - ./rasa/logs:/app/logs
+    depends_on:
+      - backend
+    networks:
+      - public-service-network
+    restart: unless-stopped
+    command: >
+      sh -c "
+        rasa train &&
+        rasa run --enable-api --cors '*' --port 5005
+      "
+
+  # Rasa Actions Server
+  rasa-actions:
+    build:
+      context: ./rasa
+      dockerfile: Dockerfile.actions
+    ports:
+      - "5055:5055"
+    environment:
+      - RAG_BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - public-service-network
+    restart: unless-stopped
+    command: rasa run actions
+
+  # Twilio Voice Handler
+  voice-handler:
+    build:
+      context: ./voice
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+      - RASA_WEBHOOK_URL=http://rasa:5005/webhooks/rest/webhook
+      - BACKEND_API_URL=http://backend:8000
+    depends_on:
+      - rasa
+      - backend
+    networks:
+      - public-service-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+      - rasa
+      - voice-handler
+    networks:
+      - public-service-network
+    restart: unless-stopped
+
+  # Redis for session management (Optional)
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - public-service-network
+    restart: unless-stopped
+
+  # PostgreSQL for persistent storage (Optional)
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=public_service_nav
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - public-service-network
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+  redis_data:
+  postgres_data:
+
+networks:
+  public-service-network:
+    driver: bridge 

@@ -1,0 +1,37 @@
+version: "3.1"
+
+rules:
+- rule: Say goodbye anytime the user says goodbye
+  steps:
+  - intent: goodbye
+  - action: utter_goodbye
+
+- rule: Say 'I am a bot' anytime the user challenges
+  steps:
+  - intent: deny
+  - action: utter_deny
+
+- rule: Activate out-of-scope
+  steps:
+  - intent: out_of_scope
+  - action: utter_out_of_scope
+
+- rule: Fallback for unclear queries
+  steps:
+  - intent: fallback
+  - action: action_fallback_to_rag
+
+- rule: Greet user
+  steps:
+  - intent: greet
+  - action: utter_greet
+
+- rule: Respond to affirmations
+  steps:
+  - intent: affirm
+  - action: utter_affirm
+
+- rule: Handle general help questions
+  steps:
+  - intent: ask_general_help
+  - action: utter_ask_general_help 

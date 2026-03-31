@@ -1,0 +1,102 @@
+version: "3.1"
+
+intents:
+  - greet
+  - goodbye
+  - affirm
+  - deny
+  - out_of_scope
+  - ask_snap_benefits
+  - ask_housing_assistance
+  - ask_healthcare_benefits
+  - ask_application_process
+  - ask_eligibility
+  - ask_documents_needed
+  - ask_local_office
+  - ask_general_help
+  - fallback
+
+entities:
+  - program
+  - location
+  - income_level
+  - family_size
+  - document_type
+
+slots:
+  program:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: program
+  location:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: location
+  income_level:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: income_level
+  family_size:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: family_size
+  user_context:
+    type: text
+    mappings:
+    - type: custom
+
+responses:
+  utter_greet:
+    - text: "Hello! I'm your public service navigation assistant. I can help you understand and access government benefits like SNAP, housing assistance, and healthcare programs. What would you like to know about today?"
+
+  utter_goodbye:
+    - text: "Thank you for calling. I hope I was able to help you with your public service questions. Have a great day!"
+
+  utter_affirm:
+    - text: "Great! I'm here to help. What specific information do you need?"
+
+  utter_deny:
+    - text: "I understand. Is there something else I can help you with regarding public services?"
+
+  utter_out_of_scope:
+    - text: "I'm specifically designed to help with public service navigation and government benefits. I can help you with SNAP, housing assistance, healthcare benefits, and general navigation questions. What would you like to know about?"
+
+  utter_ask_snap_benefits:
+    - text: "I can help you with SNAP benefits information. SNAP provides nutrition benefits to help families purchase healthy food. Would you like to know about eligibility requirements, the application process, or benefit amounts?"
+
+  utter_ask_housing_assistance:
+    - text: "I can help you with housing assistance programs. There are several options including Section 8 vouchers, public housing, and emergency shelter. What specific housing assistance would you like to learn about?"
+
+  utter_ask_healthcare_benefits:
+    - text: "I can help you understand healthcare benefits and programs. This includes Medicaid, Medicare, ACA marketplace plans, and CHIP. Which healthcare program would you like to learn about?"
+
+  utter_ask_application_process:
+    - text: "I can guide you through the application process for various programs. Which program are you interested in applying for? I can help with SNAP, housing assistance, or healthcare benefits."
+
+  utter_ask_eligibility:
+    - text: "I can help you understand eligibility requirements for public service programs. Which program are you asking about? Eligibility varies by program and includes factors like income, family size, and residency."
+
+  utter_ask_documents_needed:
+    - text: "I can help you understand what documents you'll need for applications. Common documents include government ID, proof of income, Social Security cards, and birth certificates. Which program are you applying for?"
+
+  utter_ask_local_office:
+    - text: "I can help you find local offices and resources. You can use Benefits.gov to find programs and local offices, or call 2-1-1 for information and referrals. What area are you looking for?"
+
+  utter_ask_general_help:
+    - text: "I'm here to help you navigate public services and government benefits. I can provide information about SNAP, housing assistance, healthcare benefits, and help you find local resources. What would you like to know?"
+
+  utter_fallback:
+    - text: "I'm not sure I understood that. Let me connect you to our knowledge system for a more detailed response."
+
+actions:
+  - action_fallback_to_rag
+  - action_provide_detailed_info
+  - action_connect_to_human
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true 
